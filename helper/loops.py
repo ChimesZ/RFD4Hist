@@ -25,12 +25,13 @@ def train_vanilla(epoch, train_loader, model, criterion, optimizer, opt):
         data_time.update(time.time() - end)
 
         input = input.float()
+        device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
         if torch.cuda.is_available():
-            input = input.cuda()
-            target = target.cuda()
+            input = input.to(device)
+            target = target.to(device)
 
         # ===================forward=====================
-        output = model(input)
+        _,output = model(input)
         loss = criterion(output, target)
 
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
@@ -264,9 +265,10 @@ def validate(val_loader, model, criterion, opt):
         for idx, (input, target) in enumerate(val_loader):
 
             input = input.float()
+            device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
             if torch.cuda.is_available():
-                input = input.cuda()
-                target = target.cuda()
+                input = input.to(device)
+                target = target.to(device)
 
             # output, act_record = model(input)
             # neuron_records['act_records'].extend(act_record.cpu().numpy())
@@ -278,7 +280,7 @@ def validate(val_loader, model, criterion, opt):
             loss = criterion(output, target)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            acc1, acc5 = accuracy(output, target, topk=(1, 3))
             losses.update(loss.item(), input.size(0))
             top1.update(acc1[0], input.size(0))
             top5.update(acc5[0], input.size(0))

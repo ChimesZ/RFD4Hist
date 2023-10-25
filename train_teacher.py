@@ -1,12 +1,12 @@
 from __future__ import print_function
-
+import torch
 import os
 import argparse
 import socket
 import time
 
 import tensorboard_logger as tb_logger
-import torch
+
 import torch.optim as optim
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
@@ -14,6 +14,7 @@ import torch.backends.cudnn as cudnn
 from models import model_dict
 
 from dataset.cifar100 import get_cifar100_dataloaders
+from dataset.ivygap import get_GAP_dataloaders
 
 from helper.util import adjust_learning_rate, accuracy, AverageMeter
 from helper.loops import train_vanilla as train, validate
@@ -28,7 +29,7 @@ def parse_option():
     parser.add_argument('--print_freq', type=int, default=100, help='print frequency')
     parser.add_argument('--tb_freq', type=int, default=500, help='tb frequency')
     parser.add_argument('--save_freq', type=int, default=40, help='save frequency')
-    parser.add_argument('--batch_size', type=int, default=64, help='batch_size')
+    parser.add_argument('--batch_size', type=int, default=128, help='batch_size')
     parser.add_argument('--num_workers', type=int, default=8, help='num of workers to use')
     parser.add_argument('--epochs', type=int, default=240, help='number of training epochs')
 
@@ -45,8 +46,11 @@ def parse_option():
                                  'resnet8x4', 'resnet32x4', 'wrn_16_1', 'wrn_16_2', 'wrn_40_1', 'wrn_40_2',
                                  'vgg8', 'vgg11', 'vgg13', 'vgg16', 'vgg19',
                                  'MobileNetV2', 'ShuffleV1', 'ShuffleV2', ])
-    parser.add_argument('--dataset', type=str, default='cifar100', choices=['cifar100'], help='dataset')
+    parser.add_argument('--dataset', type=str, default='ivygap_5', choices=['cifar100, ivygap, ivygap_5'], help='dataset')
 
+    # device 
+    parser.add_argument('--device', type=str, default='cuda:4', help='cuda:number')
+    parser.add_argument('--device_id', nargs='+', type=int, default=[4, 5, 6, 7])
     parser.add_argument('-t', '--trial', type=int, default=0, help='the experiment id')
 
     opt = parser.parse_args()
@@ -91,8 +95,15 @@ def main():
     if opt.dataset == 'cifar100':
         train_loader, val_loader = get_cifar100_dataloaders(batch_size=opt.batch_size, num_workers=opt.num_workers)
         n_cls = 100
+    elif opt.dataset == 'ivygap':
+        train_loader, val_loader = get_GAP_dataloaders(batch_size=opt.batch_size, num_workers=opt.num_workers)
+        n_cls = 8
+    elif opt.dataset == 'ivygap_5':
+        train_loader, val_loader = get_GAP_dataloaders(batch_size=opt.batch_size, num_workers=opt.num_workers)
+        n_cls = 5
     else:
         raise NotImplementedError(opt.dataset)
+
 
     # model
     model = model_dict[opt.model](num_classes=n_cls)
@@ -105,9 +116,12 @@ def main():
 
     criterion = nn.CrossEntropyLoss()
 
+    device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
+
     if torch.cuda.is_available():
-        model = model.cuda()
-        criterion = criterion.cuda()
+        model = model.to(device)
+        model = nn.DataParallel(model, device_ids=opt.device_id)
+        criterion = criterion.to(device)
         cudnn.benchmark = True
 
     # tensorboard
@@ -130,7 +144,7 @@ def main():
         test_acc, test_acc_top5, test_loss = validate(val_loader, model, criterion, opt)
 
         logger.log_value('test_acc', test_acc, epoch)
-        logger.log_value('test_acc_top5', test_acc_top5, epoch)
+        logger.log_value('test_acc_top3', test_acc_top5, epoch)
         logger.log_value('test_loss', test_loss, epoch)
 
         # save the best model

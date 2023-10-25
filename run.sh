@@ -13,4 +13,4 @@
 # CUDA_VISIBLE_DEVICES=2 python train_student.py --path_t ./save/models/vgg13_vanilla/ckpt_epoch_240.pth --distill md_relation_pyr --model_s vgg8 -a 0.1 -b 1 --trial 1 --feature --spatial > 8_18_1.log &
 # CUDA_VISIBLE_DEVICES=6 python train_student.py --path_t ./save/models/ResNet50_vanilla/ckpt_epoch_240.pth --distill md_relation_pyr --model_s vgg8 -a 0.1 -b 1 --trial 1 --feature --spatial > 8_18_2.log & 
 # CUDA_VISIBLE_DEVICES=0 python train_teacher.py --model vgg16 > 1_11.log &
-CUDA_VISIBLE_DEVICES=0 python engram_train_teacher.py --model vgg16 > 1_13.log &
+python '/home/zhong/Experiment/RFD_base_crd/train_teacher.py' > 10_24.log &

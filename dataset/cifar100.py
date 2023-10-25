@@ -56,7 +56,7 @@ class CIFAR100Instance(datasets.CIFAR100):
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        return img, target, index
+        return img, target
 
 
 def get_cifar100_dataloaders(batch_size=128, num_workers=8, is_instance=False):
