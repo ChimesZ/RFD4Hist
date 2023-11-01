@@ -46,7 +46,7 @@ def parse_option():
                                  'resnet8x4', 'resnet32x4', 'wrn_16_1', 'wrn_16_2', 'wrn_40_1', 'wrn_40_2',
                                  'vgg8', 'vgg11', 'vgg13', 'vgg16', 'vgg19',
                                  'MobileNetV2', 'ShuffleV1', 'ShuffleV2', ])
-    parser.add_argument('--dataset', type=str, default='ivygap_5', choices=['cifar100, ivygap, ivygap_5'], help='dataset')
+    parser.add_argument('--dataset', type=str, default='ivygap_6', choices=['cifar100, ivygap, ivygap_5, ivygap_6'], help='dataset')
 
     # device 
     parser.add_argument('--device', type=str, default='cuda:4', help='cuda:number')
@@ -101,6 +101,9 @@ def main():
     elif opt.dataset == 'ivygap_5':
         train_loader, val_loader = get_GAP_dataloaders(batch_size=opt.batch_size, num_workers=opt.num_workers)
         n_cls = 5
+    elif opt.dataset == 'ivygap_6':
+        train_loader, val_loader = get_GAP_dataloaders(batch_size=opt.batch_size, num_workers=opt.num_workers)
+        n_cls = 6
     else:
         raise NotImplementedError(opt.dataset)
 

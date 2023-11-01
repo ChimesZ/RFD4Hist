@@ -47,7 +47,7 @@ class GAP_Dataset(Dataset):
             label = 4
         if self.transform is not None:
             image = self.transform(image=image)["image"]
-        return image, label
+        return image, label, idx
     
 def get_GAP_dataloaders(batch_size=128, num_workers=8, is_instance=False):
     """
@@ -107,10 +107,10 @@ def get_GAP_dataloaders(batch_size=128, num_workers=8, is_instance=False):
     # ])
     #####END#####
 
-    if is_instance:
-        pass
-    else:
-        train_set = GAP_Dataset(images_filepaths=train_images_filepaths, 
+    # if is_instance:
+    #     pass
+    # else:
+    train_set = GAP_Dataset(images_filepaths=train_images_filepaths, 
                                 transform=train_transform)
     train_loader = DataLoader(train_set,
                               batch_size=batch_size,
@@ -125,7 +125,7 @@ def get_GAP_dataloaders(batch_size=128, num_workers=8, is_instance=False):
                              num_workers=int(num_workers/2))
 
     if is_instance:
-        pass
+        return train_loader, test_loader, len(train_set)
     else:
         return train_loader, test_loader
 

@@ -1,18 +1,34 @@
+2023-10-29 12:37:12.124955: I tensorflow/core/util/port.cc:111] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2023-10-29 12:37:12.165904: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2023-10-29 12:37:12.165953: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2023-10-29 12:37:12.165979: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2023-10-29 12:37:12.173038: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2023-10-29 12:37:12.863456: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
 Traceback (most recent call last):
-  File "/home/zhong/Experiment/RFD_base_crd/train_teacher.py", line 8, in <module>
+  File "/home/zhong/Experiment/RFD_base_crd/train_student.py", line 12, in <module>
     import tensorboard_logger as tb_logger
 ModuleNotFoundError: No module named 'tensorboard_logger'
-2023-10-18 08:45:36.657469: I tensorflow/core/util/port.cc:111] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
-2023-10-18 08:45:36.696766: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
-2023-10-18 08:45:36.696812: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
-2023-10-18 08:45:36.696832: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
-2023-10-18 08:45:36.703702: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+2023-11-01 16:51:02.853484: I tensorflow/core/util/port.cc:111] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2023-11-01 16:51:02.901412: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2023-11-01 16:51:02.901472: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2023-11-01 16:51:02.901510: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2023-11-01 16:51:02.909970: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
 To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2023-10-18 08:45:37.425380: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
-2023-10-24 14:15:39.278695: I tensorflow/core/util/port.cc:111] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
-2023-10-24 14:15:39.317631: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9342] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
-2023-10-24 14:15:39.317680: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
-2023-10-24 14:15:39.317701: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1518] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
-2023-10-24 14:15:39.324537: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
-To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2023-10-24 14:15:40.050976: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+2023-11-01 16:51:03.727920: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+Traceback (most recent call last):
+  File "/home/zhong/Experiment/RFD_base_crd/train_student.py", line 465, in <module>
+    main()
+  File "/home/zhong/Experiment/RFD_base_crd/train_student.py", line 397, in main
+    model_t = model_t.to(device)
+  File "/home/zhong/miniconda3/envs/nn_copy/lib/python3.9/site-packages/torch/nn/modules/module.py", line 899, in to
+    return self._apply(convert)
+  File "/home/zhong/miniconda3/envs/nn_copy/lib/python3.9/site-packages/torch/nn/modules/module.py", line 570, in _apply
+    module._apply(fn)
+  File "/home/zhong/miniconda3/envs/nn_copy/lib/python3.9/site-packages/torch/nn/modules/module.py", line 593, in _apply
+    param_applied = fn(param)
+  File "/home/zhong/miniconda3/envs/nn_copy/lib/python3.9/site-packages/torch/nn/modules/module.py", line 897, in convert
+    return t.to(device, dtype if t.is_floating_point() or t.is_complex() else None, non_blocking)
+  File "/home/zhong/miniconda3/envs/nn_copy/lib/python3.9/site-packages/torch/cuda/__init__.py", line 214, in _lazy_init
+    torch._C._cuda_init()
+RuntimeError: random_device could not be read

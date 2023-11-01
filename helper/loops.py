@@ -110,20 +110,28 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
         data_time.update(time.time() - end)
 
         input = input.float()
+        device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
+
         if torch.cuda.is_available():
-            input = input.cuda()
-            target = target.cuda()
-            index = index.cuda()
+            input = input.to(device)
+            target = target.to(device)
+            index = index.to(device)
             if opt.distill in ['crd']:
-                contrast_idx = contrast_idx.cuda()
+                contrast_idx = contrast_idx.to(device)
+        # if torch.cuda.is_available():
+        #     input = input.cuda()
+        #     target = target.cuda()
+        #     index = index.cuda()
+        #     if opt.distill in ['crd']:
+        #         contrast_idx = contrast_idx.cuda()
 
         # ===================forward=====================
         preact = False
         if opt.distill in ['abound']:
             preact = True
-        feat_s, logit_s = model_s(input, is_feat=True, preact=preact)
+        feat_s, logit_s = model_s(input, is_feat=True, preact=preact, label=True)
         with torch.no_grad():
-            feat_t, logit_t = model_t(input, is_feat=True, preact=preact)
+            feat_t, logit_t = model_t(input, is_feat=True, preact=preact, label=True)
             feat_t = [f.detach() for f in feat_t]
 
         # cls + kl div
@@ -262,7 +270,7 @@ def validate(val_loader, model, criterion, opt):
 
     with torch.no_grad():
         end = time.time()
-        for idx, (input, target) in enumerate(val_loader):
+        for idx, (input, target,_) in enumerate(val_loader):
 
             input = input.float()
             device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
@@ -276,7 +284,7 @@ def validate(val_loader, model, criterion, opt):
 
             # compute output
             # output = model(input, target)
-            _, output = model(input)
+            _, output = model(input, label=True)
             loss = criterion(output, target)
 
             # measure accuracy and record loss

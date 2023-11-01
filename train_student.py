@@ -9,18 +9,24 @@ import argparse
 import socket
 import time
 
-import tensorboard_logger as tb_logger
+
 import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 
+import tensorboard_logger as tb_logger
+# TUNE_DISABLE_AUTO_CALLBACK_LOGGERS=1
+# torch.cuda.current_device()
+# import os
+# os.environ['CUDA_LAUNCH_BLOCKING'] = '4'
 
 from models import model_dict
 from models.util import Embed, ConvReg, LinearEmbed
 from models.util import Connector, Translator, Paraphraser, SampleAttentionModule, SpatialAttentionModule, Tofd
 
 from dataset.cifar100 import get_cifar100_dataloaders, get_cifar100_dataloaders_sample
+from dataset.ivygap import get_GAP_dataloaders
 
 from helper.util import adjust_learning_rate
 
@@ -66,25 +72,25 @@ def parse_option():
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 
     # dataset
-    parser.add_argument('--dataset', type=str, default='cifar100', choices=['cifar100'], help='dataset')
+    parser.add_argument('--dataset', type=str, default='ivygap_5', choices=['cifar100','ivygap', 'ivygap_5', 'ivygap_6'], help='dataset')
 
     # model
-    parser.add_argument('--model_s', type=str, default='resnet8',
+    parser.add_argument('--model_s', type=str, default='resnet32',  # Resnet32 
                         choices=['resnet8', 'resnet14', 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110',
                                  'resnet8x4', 'resnet32x4', 'wrn_16_1', 'wrn_16_2', 'wrn_40_1', 'wrn_40_2',
                                  'vgg8', 'vgg11', 'vgg13', 'vgg16', 'vgg19', 'ResNet50',
                                  'MobileNetV2', 'ShuffleV1', 'ShuffleV2'])
-    parser.add_argument('--path_t', type=str, default=None, help='teacher model snapshot')
+    parser.add_argument('--path_t', type=str, default="/home/zhong/Experiment/RFD_base_crd/save/models/resnet110_ivygap_5_lr_0.05_decay_0.0005_trial_0/resnet110_best.pth", help='teacher model snapshot')
 
     # distillation
-    parser.add_argument('--distill', type=str, default='kd', choices=['kd', 'hint', 'attention', 'similarity',
+    parser.add_argument('--distill', type=str, default='kd', choices=['kd', 'hint', 'attention', 'similarity', # kd md_relation_pyr hint rkd
                                                                       'correlation', 'vid', 'crd', 'kdsvd', 'fsp',
                                                                       'rkd', 'pkt', 'abound', 'factor', 'nst', 'md_relation_pyr', 'tofd','afd'])
     parser.add_argument('--trial', type=str, default='1', help='trial id')
 
-    parser.add_argument('-r', '--gamma', type=float, default=1, help='weight for classification')
-    parser.add_argument('-a', '--alpha', type=float, default=None, help='weight balance for KD')
-    parser.add_argument('-b', '--beta', type=float, default=None, help='weight balance for other losses')
+    parser.add_argument('-r', '--gamma', type=float, default=0.1, help='weight for classification')
+    parser.add_argument('-a', '--alpha', type=float, default=0.9, help='weight balance for KD')
+    parser.add_argument('-b', '--beta', type=float, default=0, help='weight balance for other losses')
 
     # KL distillation
     parser.add_argument('--kd_T', type=float, default=4, help='temperature for KD distillation')
@@ -114,6 +120,10 @@ def parse_option():
     
     # hint layer
     parser.add_argument('--hint_layer', default=2, type=int, choices=[0, 1, 2, 3, 4])
+
+    # Device 
+    parser.add_argument('--device', type=str, default='cuda:4', help='cuda:number')
+    parser.add_argument('--device_id', nargs='+', type=int, default=[4, 5, 6, 7])
 
     opt = parser.parse_args()
 
@@ -163,7 +173,8 @@ def load_teacher(model_path, n_cls):
     print('==> loading teacher model')
     model_t = get_teacher_name(model_path)
     model = model_dict[model_t](num_classes=n_cls)
-    model.load_state_dict(torch.load(model_path)['model'])
+    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu'))['model'], strict=False)
+    # model = torch.load(model_path)
     print('==> done')
     return model
 
@@ -188,6 +199,11 @@ def main():
                                                                         num_workers=opt.num_workers,
                                                                         is_instance=True)
         n_cls = 100
+    if opt.dataset == 'ivygap_5': 
+        train_loader, val_loader, n_data = get_GAP_dataloaders(batch_size=opt.batch_size,
+                                                               num_workers=opt.num_workers,
+                                                               is_instance=True)
+        n_cls = 5
     else:
         raise NotImplementedError(opt.dataset)
 
@@ -377,14 +393,19 @@ def main():
     # append teacher after optimizer to avoid weight_decay
     module_list.append(model_t)
 
+    device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
+
     if torch.cuda.is_available():
-        module_list.cuda()
-        criterion_list.cuda()
+        model_t = model_t.to(device)
+        model_t = nn.DataParallel(model_t, device_ids=opt.device_id)
+        model_s = model_s.to(device)
+        model_s = nn.DataParallel(model_s, device_ids=opt.device_id)
+        # criterion = criterion.to(device)
         cudnn.benchmark = True
 
     # validate teacher accuracy
-    teacher_acc, _, _ = validate(val_loader, model_t, criterion_cls, opt)
-    print('teacher accuracy: ', teacher_acc)
+    # teacher_acc, _, _ = validate(val_loader, model_t, criterion_cls, opt)
+    # print('teacher accuracy: ', teacher_acc)
 
     # routine
     for epoch in range(1, opt.epochs + 1):

@@ -180,8 +180,8 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, num_filters[2], n, stride=2)
         self.layer3 = self._make_layer(block, num_filters[3], n, stride=2)
         self.avgpool = nn.AvgPool2d(8)
-        # self.fc = nn.Linear(num_filters[3] * block.expansion, num_classes)
-        self.fc = nn.Linear(1024, num_classes)
+        self.fc = nn.Linear(num_filters[3] * block.expansion, num_classes)
+        self.fc1 = nn.Linear(1024, num_classes)
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
@@ -230,7 +230,7 @@ class ResNet(nn.Module):
 
         return [bn1, bn2, bn3]
 
-    def forward(self, x, is_feat=False, preact=False):
+    def forward(self, x, is_feat=False, preact=False, label=False):
         # x = self.conv1(x)
         # x = self.bn1(x)
         # x = self.relu(x)  # 32x32
@@ -271,7 +271,10 @@ class ResNet(nn.Module):
         x = self.avgpool(self.relu(x))
         x = x.view(x.size(0), -1)
         f4 = x
-        x = self.fc(x)
+        if label: 
+            x = self.fc1(x)
+        else: 
+            x = self.fc(x)
 
         # if is_feat:
         if True:
