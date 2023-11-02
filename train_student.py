@@ -3,6 +3,7 @@ the general training framework
 """
 
 from __future__ import print_function
+from email.policy import strict
 
 import os
 import argparse
@@ -80,7 +81,7 @@ def parse_option():
                                  'resnet8x4', 'resnet32x4', 'wrn_16_1', 'wrn_16_2', 'wrn_40_1', 'wrn_40_2',
                                  'vgg8', 'vgg11', 'vgg13', 'vgg16', 'vgg19', 'ResNet50',
                                  'MobileNetV2', 'ShuffleV1', 'ShuffleV2'])
-    parser.add_argument('--path_t', type=str, default="/home/zhong/Experiment/RFD_base_crd/save/models/resnet110_ivygap_5_lr_0.05_decay_0.0005_trial_0/resnet110_best.pth", help='teacher model snapshot')
+    parser.add_argument('--path_t', type=str, default="/home/zhong/Experiment/RFD_base_crd/save/models/resnet110_ivygap_5_lr_0.05_decay_0.0005_trial_0/ckpt_epoch_240.pth", help='teacher model snapshot')
 
     # distillation
     parser.add_argument('--distill', type=str, default='kd', choices=['kd', 'hint', 'attention', 'similarity', # kd md_relation_pyr hint rkd
@@ -169,11 +170,13 @@ def get_teacher_name(model_path):
         return segments[0] + '_' + segments[1] + '_' + segments[2]
 
 
-def load_teacher(model_path, n_cls):
+def load_teacher(model_path, n_cls, opt):
     print('==> loading teacher model')
     model_t = get_teacher_name(model_path)
     model = model_dict[model_t](num_classes=n_cls)
-    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu'))['model'], strict=False)
+    
+    # model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu'))['model'], strict=False)
+    model.load_state_dict({k.replace('module.',''):v for k,v in torch.load(model_path)['model'].items()}) #Because parallel was used in training
     # model = torch.load(model_path)
     print('==> done')
     return model
@@ -208,10 +211,10 @@ def main():
         raise NotImplementedError(opt.dataset)
 
     # model
-    model_t = load_teacher(opt.path_t, n_cls)
+    model_t = load_teacher(opt.path_t, n_cls, opt)
     model_s = model_dict[opt.model_s](num_classes=n_cls)
 
-    data = torch.randn(2, 3, 32, 32)
+    data = torch.randn(2, 3, 150, 150)
     model_t.eval()
     model_s.eval()
     feat_t, _ = model_t(data, is_feat=True)
@@ -404,8 +407,8 @@ def main():
         cudnn.benchmark = True
 
     # validate teacher accuracy
-    # teacher_acc, _, _ = validate(val_loader, model_t, criterion_cls, opt)
-    # print('teacher accuracy: ', teacher_acc)
+    teacher_acc, _, _ = validate(val_loader, model_t, criterion_cls, opt)
+    print('teacher accuracy: ', teacher_acc)
 
     # routine
     for epoch in range(1, opt.epochs + 1):
