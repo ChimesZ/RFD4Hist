@@ -1,4 +1,5 @@
 from __future__ import print_function
+from os import device_encoding
 
 import torch
 import torch.nn as nn
@@ -6,9 +7,10 @@ import math
 import torch.nn.functional as F
 
 class SampleAttentionModule(nn.Module):
-    def __init__(self, link_1, num_stage=3):
+    def __init__(self, link_1, opt, num_stage=3):
         super(SampleAttentionModule, self).__init__()
-        self.alpha_1 = nn.Parameter(torch.zeros(1)).cuda()
+        device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
+        self.alpha_1 = nn.Parameter(torch.zeros(1)).to(device)
         self.link_1 = link_1
         self.num_stage = num_stage
     def forward(self, t, s):
@@ -34,9 +36,10 @@ class SampleAttentionModule(nn.Module):
         return a, b
 
 class SpatialAttentionModule(nn.Module):
-    def __init__(self, link_2, num_stage=3):
+    def __init__(self, link_2, opt, num_stage=3):
         super(SpatialAttentionModule, self).__init__()
-        self.alpha_2 = nn.Parameter(torch.zeros(1)).cuda()
+        device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
+        self.alpha_2 = nn.Parameter(torch.zeros(1)).to(device)
         self.link_2 = link_2
         self.num_stage = num_stage
     def forward(self, t, s):
@@ -90,15 +93,16 @@ def CrossEntropy(outputs, targets, T=3):
     return -(log_softmax_outputs * softmax_targets).sum(dim=1).mean()
 
 class Tofd(nn.Module):
-    def __init__(self, link, num_stage=3, alpha_tofd=0.05, beta_tofd=0.4):
+    def __init__(self, link, opt, num_stage=3, alpha_tofd=0.05, beta_tofd=0.4):
         super(Tofd, self).__init__()
         self.link = link
         self.num_stage = num_stage
         self.alpha_tofd = alpha_tofd
         self.beta_tofd = beta_tofd
         self.criterion = torch.nn.CrossEntropyLoss()
+        self.device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
     def forward(self, t, s, outputs, teacher_logits, labels, epoch):
-        loss = torch.FloatTensor([0.]).cuda()
+        loss = torch.FloatTensor([0.]).to(self.device)
         #   Distillation Loss + Task Loss
         for index in range(0, self.num_stage):
             s[index] = self.link[index](s[index])
@@ -113,8 +117,8 @@ class Tofd(nn.Module):
         for index in range(self.num_stage):
             weight = list(self.link[index].parameters())[0]
             weight_trans = weight.permute(1, 0)
-            ones = torch.eye(weight.size(0)).cuda()
-            ones2 = torch.eye(weight.size(1)).cuda()
+            ones = torch.eye(weight.size(0)).to(self.device)
+            ones2 = torch.eye(weight.size(1)).to(self.device)
             loss += torch.dist(torch.mm(weight, weight_trans), ones, p=2) * self.beta_tofd
             loss += torch.dist(torch.mm(weight_trans, weight), ones2, p=2) * self.beta_tofd
         loss /= 10

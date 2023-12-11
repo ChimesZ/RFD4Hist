@@ -93,6 +93,7 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
+    losses_kd = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
 
@@ -145,7 +146,7 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
 
         # other kd beyond KL divergence
         if opt.distill == 'kd':
-            loss_kd = 0
+            loss_kd = torch.tensor([0])
         elif opt.distill == 'hint':
             f_s = module_list[1](feat_s[opt.hint_layer])
             f_t = feat_t[opt.hint_layer]
@@ -202,26 +203,44 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
             factor_t = module_list[2](feat_t[-2], is_factor=True)
             loss_kd = criterion_kd(factor_s, factor_t)
         elif opt.distill == 'md_relation_pyr':
-            a_1, b_1 = module_list[1](feat_t, feat_s) # SAM
-            sum_spkd_loss_1 += a_1.item()
-            sum_spkd_pixel_loss_1 += b_1.item()
-            loss_kd = a_1 * opt.gamma_1 + b_1 * opt.theta_1
+            if opt.spatial and opt.feature: 
+                a_1, b_1 = module_list[1](feat_t, feat_s) # SAM
+                sum_spkd_loss_1 += a_1.item()
+                sum_spkd_pixel_loss_1 += b_1.item()
+                loss_kd = a_1 * opt.gamma_1 + b_1 * opt.theta_1
 
-            a_2, b_2 = module_list[2](feat_t, feat_s) # SPAM
-            sum_spkd_loss_2 += a_2.item()
-            sum_spkd_pixel_loss_2 += b_2.item()
-            loss_kd += a_2 * opt.gamma_2 + b_2 * opt.theta_2
+                a_2, b_2 = module_list[2](feat_t, feat_s) # SPAM
+                sum_spkd_loss_2 += a_2.item()
+                sum_spkd_pixel_loss_2 += b_2.item()
+
+                loss_kd += a_2 * opt.gamma_2 + b_2 * opt.theta_2
+            elif opt.feature:
+                a_1, b_1 = module_list[1](feat_t, feat_s) # SAM
+                sum_spkd_loss_1 += a_1.item()
+                sum_spkd_pixel_loss_1 += b_1.item()
+                loss_kd = a_1 * opt.gamma_1 + b_1 * opt.theta_1
+            elif opt.spatial: 
+                a_2, b_2 = module_list[1](feat_t, feat_s) # SPAM
+                sum_spkd_loss_2 += a_2.item()
+                sum_spkd_pixel_loss_2 += b_2.item() 
+                loss_kd = a_2 * opt.gamma_2 + b_2 * opt.theta_2
+            else: 
+                raise NotImplementedError('feature or spatial')
         elif opt.distill == 'tofd':
             loss_kd = module_list[1](feat_t, feat_s, logit_s, logit_t, target, epoch) # tofd
         elif opt.distill == 'afd':
             loss_kd = criterion_kd(feat_s, feat_t)
         else:
             raise NotImplementedError(opt.distill)
-
-        loss = opt.gamma * loss_cls + opt.alpha * loss_div + opt.beta * loss_kd
+        
+        if opt.distill != 'kd': 
+            loss = opt.gamma * loss_cls + opt.alpha * loss_div + opt.beta * loss_kd
+        else: 
+            loss = opt.gamma * loss_cls + opt.alpha * loss_div
 
         acc1, acc5 = accuracy(logit_s, target, topk=(1, 5))
         losses.update(loss.item(), input.size(0))
+        losses_kd.update(loss_kd.item(), input.size(0))
         top1.update(acc1[0], input.size(0))
         top5.update(acc5[0], input.size(0))
 
@@ -240,10 +259,11 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                  'Loss@kd {losskd.val:.4f} ({losskd.avg:.4f})\t'
                   'Acc@1 {top1.val:.3f} ({top1.avg:.3f})\t'
                   'Acc@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                 epoch, idx, len(train_loader), batch_time=batch_time,
-                data_time=data_time, loss=losses, top1=top1, top5=top5))
+                data_time=data_time, loss=losses, losskd=losses_kd ,top1=top1, top5=top5))
             sys.stdout.flush()
         
         # if idx % 50 == 0:

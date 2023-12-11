@@ -9,6 +9,7 @@ import os
 import argparse
 import socket
 import time
+from aiohttp import TraceResponseChunkReceivedParams
 
 
 import torch
@@ -123,7 +124,7 @@ def parse_option():
     parser.add_argument('--hint_layer', default=2, type=int, choices=[0, 1, 2, 3, 4])
 
     # Device 
-    parser.add_argument('--device', type=str, default='cuda:4', help='cuda:number')
+    parser.add_argument('--device', type=str, default=None, help='cuda:number')
     parser.add_argument('--device_id', nargs='+', type=int, default=[4, 5, 6, 7])
 
     opt = parser.parse_args()
@@ -176,7 +177,7 @@ def load_teacher(model_path, n_cls, opt):
     model = model_dict[model_t](num_classes=n_cls)
     
     # model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu'))['model'], strict=False)
-    model.load_state_dict({k.replace('module.',''):v for k,v in torch.load(model_path)['model'].items()}) #Because parallel was used in training
+    model.load_state_dict({k.replace('module.',''):v for k,v in torch.load(model_path, map_location=torch.device(opt.device))['model'].items()}) #Because parallel was used in training
     # model = torch.load(model_path)
     print('==> done')
     return model
@@ -211,10 +212,16 @@ def main():
         raise NotImplementedError(opt.dataset)
 
     # model
+
     model_t = load_teacher(opt.path_t, n_cls, opt)
     model_s = model_dict[opt.model_s](num_classes=n_cls)
-
-    data = torch.randn(2, 3, 150, 150)
+    device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
+    if torch.cuda.is_available():
+        model_t = model_t.to(device)
+        model_t = nn.DataParallel(model_t, device_ids=opt.device_id)
+        model_s = model_s.to(device)
+        model_s = nn.DataParallel(model_s, device_ids=opt.device_id)
+    data = torch.randn(2, 3, 150, 150).to(device)
     model_t.eval()
     model_s.eval()
     feat_t, _ = model_t(data, is_feat=True)
@@ -329,7 +336,7 @@ def main():
                 teacher_feature_size = t_feat.size(1)
                 student_feature_size = s_feat.size(1)
                 link_1.append(nn.Linear(student_feature_size, teacher_feature_size, bias=False))
-            SAM = SampleAttentionModule(nn.ModuleList(link_1), opt.num_stage)
+            SAM = SampleAttentionModule(nn.ModuleList(link_1), opt, opt.num_stage)
             module_list.append(SAM)
             trainable_list.append(SAM)
 
@@ -345,7 +352,7 @@ def main():
                 teacher_feature_size = t_feat.size(1)
                 student_feature_size = s_feat.size(1)
                 link_2.append(nn.Linear(student_feature_size, teacher_feature_size, bias=False))
-            SPAM = SpatialAttentionModule(nn.ModuleList(link_2), opt.num_stage)
+            SPAM = SpatialAttentionModule(nn.ModuleList(link_2), opt, opt.num_stage)
             module_list.append(SPAM)
             trainable_list.append(SPAM)
     elif opt.distill == 'tofd':
@@ -355,7 +362,7 @@ def main():
         link = []
         for j in range(opt.num_stage):
             link.append(nn.Linear(student_feature_size, teacher_feature_size, bias=False))
-        tofd = Tofd(nn.ModuleList(link), opt.num_stage, opt.alpha_tofd, opt.beta_tofd)
+        tofd = Tofd(nn.ModuleList(link), opt, opt.num_stage, opt.alpha_tofd, opt.beta_tofd)
         module_list.append(tofd)
         trainable_list.append(tofd)
     elif opt.distill == 'afd':
@@ -399,11 +406,13 @@ def main():
     device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
 
     if torch.cuda.is_available():
-        model_t = model_t.to(device)
-        model_t = nn.DataParallel(model_t, device_ids=opt.device_id)
-        model_s = model_s.to(device)
-        model_s = nn.DataParallel(model_s, device_ids=opt.device_id)
+        # model_t = model_t.to(device)
+        # model_t = nn.DataParallel(model_t, device_ids=opt.device_id)
+        # model_s = model_s.to(device)
+        # model_s = nn.DataParallel(model_s, device_ids=opt.device_id)
         # criterion = criterion.to(device)
+        module_list.to(device)
+        trainable_list.to(device)
         cudnn.benchmark = True
 
     # validate teacher accuracy

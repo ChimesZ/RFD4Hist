@@ -199,7 +199,7 @@ def ShuffleV2(**kwargs):
 
 if __name__ == '__main__':
     net = ShuffleV2(num_classes=100)
-    x = torch.randn(3, 3, 32, 32)
+    x = torch.randn(3, 3, 150, 150)
     import time
     a = time.time()
     feats, logit = net(x, is_feat=True, preact=True)
