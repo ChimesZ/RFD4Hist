@@ -22,7 +22,7 @@ def train_vanilla(epoch, train_loader, model, criterion, optimizer, opt):
     top5 = AverageMeter()
 
     end = time.time()
-    for idx, (input, target) in enumerate(train_loader):
+    for idx, (input, target, _) in enumerate(train_loader):
         data_time.update(time.time() - end)
 
         input = input.float()
@@ -32,7 +32,7 @@ def train_vanilla(epoch, train_loader, model, criterion, optimizer, opt):
             target = target.to(device)
 
         # ===================forward=====================
-        _,output = model(input)
+        output = model(input)
         loss = criterion(output, target)
 
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
@@ -131,9 +131,9 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
         preact = False
         if opt.distill in ['abound']:
             preact = True
-        feat_s, logit_s = model_s(input, is_feat=True, preact=preact, label=True)
+        feat_s, logit_s = model_s(input, is_feat=True, preact=preact)
         with torch.no_grad():
-            feat_t, logit_t = model_t(input, is_feat=True, preact=preact, label=True)
+            feat_t, logit_t = model_t(input, is_feat=True, preact=preact)
             feat_t = [f.detach() for f in feat_t]
 
         # cls + kl div
@@ -291,7 +291,7 @@ def validate(val_loader, model, criterion, opt):
 
     with torch.no_grad():
         end = time.time()
-        for idx, (input, target,_) in enumerate(val_loader):
+        for idx, (input, target, _) in enumerate(val_loader):
 
             input = input.float()
             device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
@@ -305,7 +305,7 @@ def validate(val_loader, model, criterion, opt):
 
             # compute output
             # output = model(input, target)
-            _, output = model(input, label=True)
+            output = model(input)
             loss = criterion(output, target)
 
             # measure accuracy and record loss

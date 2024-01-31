@@ -1,0 +1,1 @@
+    # > logs_st/${DATE}_${TEACHER}_${STUDENT}_kd_a:${A}_b:${B}.log & 

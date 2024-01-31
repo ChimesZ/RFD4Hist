@@ -38,23 +38,21 @@ class GAP_Dataset(Dataset):
         if os.path.normpath(image_filepath).split(os.sep)[-2] == "CT":
             label = 3
         if os.path.normpath(image_filepath).split(os.sep)[-2] == "CTmvp":
-            label = 3
-        if os.path.normpath(image_filepath).split(os.sep)[-2] == "CTpan":
-            label = 3
-        if os.path.normpath(image_filepath).split(os.sep)[-2] == "CTpnz":
-            label = 3
-        if os.path.normpath(image_filepath).split(os.sep)[-2] == "BG":
             label = 4
+        if os.path.normpath(image_filepath).split(os.sep)[-2] == "CTpan":
+            label = 5
+        if os.path.normpath(image_filepath).split(os.sep)[-2] == "CTpnz":
+            label = 6
+        if os.path.normpath(image_filepath).split(os.sep)[-2] == "BG":
+            label = 7
         if self.transform is not None:
             image = self.transform(image=image)["image"]
         return image, label, idx
     
 def get_GAP_dataloaders(batch_size=128, num_workers=8, is_instance=False):
-    """
-    cifar 100
-    """
-    train_path = '/home/zhong/data/GAP/Dataset/train/'
-    test_path = '/home/zhong/data/GAP/Dataset/val/'
+
+    train_path = '/data1/GAP/Dataset_10000_5/train/'
+    test_path = '/data1/GAP/Dataset_10000_5/val/'
 
     train_images_filepaths = all_path(train_path, '.jpg')
     test_images_filepaths = all_path(test_path, '.jpg')

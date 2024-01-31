@@ -9,7 +9,7 @@ import os
 import argparse
 import socket
 import time
-from aiohttp import TraceResponseChunkReceivedParams
+# from aiohttp import TraceResponseChunkReceivedParams
 
 
 import torch
@@ -63,18 +63,18 @@ def parse_option():
     parser.add_argument('--save_freq', type=int, default=40, help='save frequency')
     parser.add_argument('--batch_size', type=int, default=64, help='batch_size')
     parser.add_argument('--num_workers', type=int, default=8, help='num of workers to use')
-    parser.add_argument('--epochs', type=int, default=240, help='number of training epochs')
+    parser.add_argument('--epochs', type=int, default=120, help='number of training epochs')
     parser.add_argument('--init_epochs', type=int, default=30, help='init training for two-stage methods')
 
     # optimization
-    parser.add_argument('--learning_rate', type=float, default=0.05, help='learning rate')
-    parser.add_argument('--lr_decay_epochs', type=str, default='150,180,210', help='where to decay lr, can be a list')
+    parser.add_argument('--learning_rate', type=float, default=0.005, help='learning rate')
+    parser.add_argument('--lr_decay_epochs', type=str, default='75,90,105', help='where to decay lr, can be a list')
     parser.add_argument('--lr_decay_rate', type=float, default=0.1, help='decay rate for learning rate')
     parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight decay')
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 
     # dataset
-    parser.add_argument('--dataset', type=str, default='ivygap_5', choices=['cifar100','ivygap', 'ivygap_5', 'ivygap_6'], help='dataset')
+    parser.add_argument('--dataset', type=str, default='ivygap', choices=['cifar100','ivygap', 'ivygap_5', 'ivygap_6'], help='dataset')
 
     # model
     parser.add_argument('--model_s', type=str, default='resnet32',  # Resnet32 
@@ -124,22 +124,22 @@ def parse_option():
     parser.add_argument('--hint_layer', default=2, type=int, choices=[0, 1, 2, 3, 4])
 
     # Device 
-    parser.add_argument('--device', type=str, default=None, help='cuda:number')
-    parser.add_argument('--device_id', nargs='+', type=int, default=[4, 5, 6, 7])
+    parser.add_argument('--device', type=str, default='cuda:2', help='cuda:number')
+    parser.add_argument('--device_id', nargs='+', type=int, default=[2,3,4,5,6])
 
     opt = parser.parse_args()
 
     # set different learning rate from these 4 models
-    if opt.model_s in ['MobileNetV2', 'ShuffleV1', 'ShuffleV2']:
-        opt.learning_rate = 0.01
+    # if opt.model_s in ['MobileNetV2', 'ShuffleV1', 'ShuffleV2']:
+    #     opt.learning_rate = 0.01
 
     # set the path according to the environment
     if hostname.startswith('visiongpu'):
         opt.model_path = '/path/to/my/student_model'
         opt.tb_path = '/path/to/my/student_tensorboards'
     else:
-        opt.model_path = './save/student_model'
-        opt.tb_path = './save/student_tensorboards'
+        opt.model_path = '/home/lthpc/zhongzh/RFD4Hist/save/student_model'
+        opt.tb_path = '/home/lthpc/zhongzh/RFD4Hist/save/student_tensorboards'
 
     iterations = opt.lr_decay_epochs.split(',')
     opt.lr_decay_epochs = list([])
@@ -175,7 +175,7 @@ def load_teacher(model_path, n_cls, opt):
     print('==> loading teacher model')
     model_t = get_teacher_name(model_path)
     model = model_dict[model_t](num_classes=n_cls)
-    
+    # print(model)
     # model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu'))['model'], strict=False)
     model.load_state_dict({k.replace('module.',''):v for k,v in torch.load(model_path, map_location=torch.device(opt.device))['model'].items()}) #Because parallel was used in training
     # model = torch.load(model_path)
@@ -203,11 +203,11 @@ def main():
                                                                         num_workers=opt.num_workers,
                                                                         is_instance=True)
         n_cls = 100
-    if opt.dataset == 'ivygap_5': 
+    if opt.dataset == 'ivygap': 
         train_loader, val_loader, n_data = get_GAP_dataloaders(batch_size=opt.batch_size,
                                                                num_workers=opt.num_workers,
                                                                is_instance=True)
-        n_cls = 5
+        n_cls = 8
     else:
         raise NotImplementedError(opt.dataset)
 
@@ -216,16 +216,17 @@ def main():
     model_t = load_teacher(opt.path_t, n_cls, opt)
     model_s = model_dict[opt.model_s](num_classes=n_cls)
     device = torch.device(opt.device if torch.cuda.is_available() else 'cpu')
+    data = torch.randn(2, 3, 150, 150)
+    model_t.eval()
+    model_s.eval()
+    feat_t, _ = model_t(data, is_feat=True)
+    feat_s, _ = model_s(data, is_feat=True)
     if torch.cuda.is_available():
         model_t = model_t.to(device)
         model_t = nn.DataParallel(model_t, device_ids=opt.device_id)
         model_s = model_s.to(device)
         model_s = nn.DataParallel(model_s, device_ids=opt.device_id)
-    data = torch.randn(2, 3, 150, 150).to(device)
-    model_t.eval()
-    model_s.eval()
-    feat_t, _ = model_t(data, is_feat=True)
-    feat_s, _ = model_s(data, is_feat=True)
+
 
     module_list = nn.ModuleList([])
     module_list.append(model_s)
@@ -412,7 +413,9 @@ def main():
         # model_s = nn.DataParallel(model_s, device_ids=opt.device_id)
         # criterion = criterion.to(device)
         module_list.to(device)
+        # module_list = nn.DataParallel(module_list, device_ids=opt.device_id)
         trainable_list.to(device)
+        # trainable_list = nn.DataParallel(trainable_list, device_ids=opt.device_id)
         cudnn.benchmark = True
 
     # validate teacher accuracy

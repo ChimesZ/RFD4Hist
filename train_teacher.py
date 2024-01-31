@@ -29,7 +29,7 @@ def parse_option():
     parser.add_argument('--print_freq', type=int, default=100, help='print frequency')
     parser.add_argument('--tb_freq', type=int, default=500, help='tb frequency')
     parser.add_argument('--save_freq', type=int, default=40, help='save frequency')
-    parser.add_argument('--batch_size', type=int, default=128, help='batch_size')
+    parser.add_argument('--batch_size', type=int, default=32, help='batch_size')
     parser.add_argument('--num_workers', type=int, default=8, help='num of workers to use')
     parser.add_argument('--epochs', type=int, default=240, help='number of training epochs')
 
@@ -41,16 +41,16 @@ def parse_option():
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 
     # dataset
-    parser.add_argument('--model', type=str, default='resnet110',
+    parser.add_argument('--model', type=str, default='ResNet101',
                         choices=['resnet8', 'resnet14', 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110',
-                                 'resnet8x4', 'resnet32x4', 'wrn_16_1', 'wrn_16_2', 'wrn_40_1', 'wrn_40_2',
+                                 'resnet8x4', 'resnet32x4','ResNet18', 'ResNet50', 'ResNet34', 'ResNet101', 'ResNet152', 'wrn_16_1', 'wrn_16_2', 'wrn_40_1', 'wrn_40_2',
                                  'vgg8', 'vgg11', 'vgg13', 'vgg16', 'vgg19',
                                  'MobileNetV2', 'ShuffleV1', 'ShuffleV2', ])
-    parser.add_argument('--dataset', type=str, default='ivygap_6', choices=['cifar100, ivygap, ivygap_5, ivygap_6'], help='dataset')
+    parser.add_argument('--dataset', type=str, default='ivygap_5', choices=['cifar100', 'ivygap', 'ivygap_5', 'ivygap_6'], help='dataset')
 
     # device 
-    parser.add_argument('--device', type=str, default='cuda:4', help='cuda:number')
-    parser.add_argument('--device_id', nargs='+', type=int, default=[4, 5, 6, 7])
+    parser.add_argument('--device', type=str, default='cuda:0', help='cuda:number')
+    parser.add_argument('--device_id', nargs='+', type=int, default=[0, 1, 2, 3, 4, 5, 6])
     parser.add_argument('-t', '--trial', type=int, default=0, help='the experiment id')
 
     opt = parser.parse_args()
@@ -64,8 +64,8 @@ def parse_option():
         opt.model_path = '/path/to/my/model'
         opt.tb_path = '/path/to/my/tensorboard'
     else:
-        opt.model_path = './save/models'
-        opt.tb_path = './save/tensorboard'
+        opt.model_path = '/home/lthpc/zhongzh/RFD4Hist/save/models'
+        opt.tb_path = '/home/lthpc/zhongzh/RFD4Hist/save/tensorboard'
 
     iterations = opt.lr_decay_epochs.split(',')
     opt.lr_decay_epochs = list([])

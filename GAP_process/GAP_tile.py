@@ -72,6 +72,39 @@ def patch_annot(filepath, filename, savepath, annot:pd.DataFrame, size=150):
         print('Number of {} patches: {}'.format(annot['type'][i],
                                                 annot['num'][i]))
 
+
+def main():
+    size = 150
+    path = '/data1/GAP/'
+    label_path = path + 'Label/'
+    wsi_path = path + 'wsi/'
+    patch_path = path + f'Patch_{size}/'
+    if not os.path.exists(patch_path): os.mkdir(patch_path)
+    annot_save_path = path + 'info/'
+    if not os.path.exists(annot_save_path): os.mkdir(annot_save_path)
+    info = pd.read_csv(path + 'GAP_info.csv')
+    for i in tqdm(range(len(info))):
+        tag = info['tag'][i]
+        tag_path = patch_path + tag + '/'
+        if os.path.exists(tag_path) is False: 
+            os.mkdir(tag_path)
+        names = eval(info['file'][i])
+        for name in names: 
+            print(f'===Begin to process segmentation picture of {name}===')
+            annot = label_segment(filepath=label_path, 
+                            filename=name+'_L', 
+                            savepath = annot_save_path,
+                            size=size)
+            print(f'Begin to process WSI {name}')
+            patch_annot(filepath=wsi_path, 
+                        filename=name, 
+                        savepath=tag_path,
+                        annot=annot,
+                        size=size)
+            print('===========Finished===========')
+
+if __name__ == '__main__': 
+    main()
 # if __name__ == '__main__': 
 #     filepath = '/home/ChimesZ/data/pathology/'
 #     filename_L = 'W10-1-1-B.2.02_L'
